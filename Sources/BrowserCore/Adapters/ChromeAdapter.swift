@@ -10,10 +10,16 @@ struct ChromeAdapter: BrowserAdapter {
             throw BrowserError.browserNotRunning(.chrome)
         }
 
+        var activeTabIdPerWindow: [Int: String] = [:]
         return sb.listTabs(app: app).map { entry in
             let title = sb.performSelector(on: entry.raw, name: "title", default: "")
             let url = sb.performSelector(on: entry.raw, name: "URL", default: "")
-            let active = sb.performSelector(on: entry.raw, name: "active", default: false)
+            if activeTabIdPerWindow[entry.windowIndex] == nil {
+                let activeTab = entry.windowRaw.value(forKey: "activeTab") as AnyObject
+                activeTabIdPerWindow[entry.windowIndex] = activeTab.value(forKey: "id") as? String ?? ""
+            }
+            let tabId = sb.performSelector(on: entry.raw, name: "id", default: "")
+            let active = !tabId.isEmpty && tabId == activeTabIdPerWindow[entry.windowIndex]
             return Tab(id: "\(entry.windowIndex):\(entry.tabIndex)", title: title, url: url, active: active)
         }
     }

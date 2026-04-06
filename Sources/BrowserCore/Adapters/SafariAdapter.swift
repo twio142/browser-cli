@@ -9,11 +9,15 @@ struct SafariAdapter: BrowserAdapter {
             throw BrowserError.browserNotRunning(.safari)
         }
 
+        var activeTabIndexPerWindow: [Int: Int] = [:]
         return sb.listTabs(app: app).map { entry in
             let title = sb.performSelector(on: entry.raw, name: "name", default: "")
             let url = sb.performSelector(on: entry.raw, name: "URL", default: "")
-            let currentTab = entry.windowRaw.value(forKey: "currentTab")
-            let active = (entry.raw as? NSObject)?.isEqual(currentTab) ?? false
+            if activeTabIndexPerWindow[entry.windowIndex] == nil {
+                let currentTab = entry.windowRaw.value(forKey: "currentTab") as AnyObject
+                activeTabIndexPerWindow[entry.windowIndex] = currentTab.value(forKey: "index") as? Int ?? -1
+            }
+            let active = activeTabIndexPerWindow[entry.windowIndex] == entry.tabIndex
             return Tab(id: "\(entry.windowIndex):\(entry.tabIndex)", title: title, url: url, active: active)
         }
     }
