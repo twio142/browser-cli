@@ -1,0 +1,3 @@
+import BrowserCore
+
+BrowserCLI.main()

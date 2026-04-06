@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>browser-cli requires Apple Events access to retrieve browser tab information and HTML content.</string>
+    <key>NSAccessibilityUsageDescription</key>
+    <string>browser-cli requires Accessibility access to trigger Arc screenshot functionality.</string>
+</dict>
+</plist>

@@ -59,23 +59,24 @@ ID. Verify stdout contains the raw HTML of that page.
 
 ---
 
-### User Story 3 - Capture Screenshot of Frontmost Arc Tab (Priority: P3)
+### User Story 3 - Capture Screenshot of an Arc Tab (Priority: P3)
 
-A user wants to capture a screenshot of the currently active tab in Arc browser
-and receive the image as a file.
+A user wants to capture a screenshot of a specific tab in Arc browser. The tab
+is activated (brought to focus) first, then Arc's screenshot feature is triggered,
+copying the image to the clipboard.
 
 **Why this priority**: Arc-specific capability; does not block other stories and
 can be delivered independently.
 
-**Independent Test**: With Arc running and a tab in the foreground, run the
-screenshot command. Verify an image file is produced at the expected path.
+**Independent Test**: With Arc running and multiple tabs open, run the screenshot
+command targeting a background tab. Verify that tab is activated and the clipboard
+contains the captured image.
 
 **Acceptance Scenarios**:
 
-1. **Given** Arc is running with a tab in the foreground, **When** the user runs
-   `browser-cli screenshot --browser arc`, **Then** a PNG file is written to the
-   path specified by `--output` (defaulting to a timestamped filename in the
-   current directory).
+1. **Given** Arc is running with tab `1:2` open, **When** the user runs
+   `browser-cli screenshot --browser arc --tab 1:2`, **Then** Arc activates that
+   tab, captures the full page, and the image is available on the clipboard.
 2. **Given** Arc is not running, **When** the screenshot command is invoked, **Then**
    exit code is non-zero and stderr contains a human-readable error.
 3. **Given** the `--browser` flag is set to `chrome` or `safari`, **When** the
@@ -84,61 +85,52 @@ screenshot command. Verify an image file is produced at the expected path.
 
 ---
 
-### User Story 4 - Extract Article Text from a Tab (Priority: P4)
-
-A user wants to extract the readable article body from a tab, stripping navigation,
-ads, and boilerplate, receiving clean text output.
-
-**Why this priority**: A convenience layer on top of HTML retrieval (P2). Requires
-an external extraction tool to be installed.
-
-**Independent Test**: Run the extract command on a tab showing a news article.
-Verify the output contains the article body text and is free of navigation markup.
-
-**Acceptance Scenarios**:
-
-1. **Given** a tab is open on an article page, **When** the user runs
-   `browser-cli extract --browser chrome --tab 1:2`, **Then** stdout contains the
-   article body as clean text with boilerplate removed.
-2. **Given** the required extraction tool is not installed, **When** the extract
-   command is run, **Then** exit code is non-zero and stderr names the missing tool
-   and explains how to install it.
-3. **Given** the page has no identifiable article body, **When** the extract command
-   is run, **Then** the tool returns best-effort text content and exits with code 0,
-   optionally warning on stderr.
-
----
-
 ### Edge Cases
 
 - What happens when a browser window has no open tabs?
-- What happens if a tab is still loading when HTML is requested?
-- What if two instances of the same browser are running (e.g., Chrome and Chrome Canary)?
+- What happens if a tab is still loading when HTML is requested? → Error with non-zero exit; user must wait for the tab to finish loading and retry.
+- What if two instances of the same browser are running (e.g., Chrome and Chrome Canary)? → `--browser chrome` targets `com.google.Chrome` exclusively; Chrome Canary is only reachable as the system default browser.
 - What if a tab title or URL contains non-ASCII characters?
+
+## Clarifications
+
+### Session 2026-04-07
+
+- Q: What should happen when HTML is requested for a tab that is still loading? → A: Return a non-zero error; user must wait for the tab to finish loading and retry.
+- Q: Does `--browser chrome` target exactly Google Chrome or all Chromium-based browsers? → A: Exactly `com.google.Chrome`. Other Chromium-based browsers (Canary, Brave, etc.) are only reachable via default browser detection; explicit flag support for them is out of scope for v1.
+- Q: What should the screenshot command output on success? → A: If `--output` is specified, read the image from the clipboard via NSPasteboard, write it as PNG to the given path, and print the path to stdout. If `--output` is omitted, the image stays on the clipboard and the CLI prints "Screenshot copied to clipboard."
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The tool MUST support a `--browser` flag accepting `chrome`, `safari`,
-  and `arc` as values.
+- **FR-001**: The `--browser` flag MUST accept `chrome` (exactly `com.google.Chrome`),
+  `safari`, and `arc`. When omitted, the tool MUST detect the system default browser
+  by bundle ID and use the appropriate adapter (including for other Chromium-based
+  browsers such as Chrome Canary or Brave). If the default browser has no supported
+  adapter, the tool MUST error with a clear message. Explicit `--browser` support
+  for non-Chrome Chromium browsers is out of scope for v1.
 - **FR-002**: The `list` command MUST output a JSON array to stdout where each
   element contains at minimum `id`, `title`, and `url` fields.
-- **FR-003**: Tab IDs MUST be usable as input to the `html` and `extract` commands
-  within the same browser session.
+- **FR-003**: Tab IDs MUST be usable as input to the `html` and `screenshot`
+  commands within the same browser session.
 - **FR-004**: The `html` command MUST write the full HTML source of the specified
   tab to stdout.
-- **FR-005**: The `screenshot` command MUST be restricted to Arc browser and MUST
-  write a PNG image to the path specified by `--output`, defaulting to a
-  timestamped filename in the current directory.
-- **FR-006**: The `extract` command MUST pipe the tab's HTML through an external
-  article extraction tool and write the result to stdout.
-- **FR-007**: All error conditions MUST produce a non-zero exit code and a
+- **FR-005**: The `screenshot` command MUST be restricted to Arc browser. If `--tab`
+  is provided, Arc MUST activate that tab before capturing; otherwise the frontmost
+  tab is used. Arc's "Capture Full Page" copies the image to the system clipboard.
+  If `--output` is specified, the CLI MUST read the image from the clipboard via
+  NSPasteboard, write it as a PNG to the given path, and print that path to stdout.
+  If `--output` is omitted, the image stays on the clipboard and the CLI MUST print
+  "Screenshot copied to clipboard." to stdout.
+- **FR-006**: All error conditions MUST produce a non-zero exit code and a
   human-readable message on stderr that names the browser, describes the failure,
   and where possible suggests a remediation step.
-- **FR-008**: When Chrome or Arc HTML retrieval requires a browser permission that
+- **FR-007**: When Chrome or Arc HTML retrieval requires a browser permission that
   is not enabled, stderr MUST identify the missing permission and describe how to
   enable it.
+- **FR-008**: The `html` command MUST return a non-zero error if the target tab is
+  still loading. stderr MUST indicate the tab is not yet loaded and suggest retrying.
 
 ### Key Entities
 
@@ -158,8 +150,8 @@ Verify the output contains the article body text and is free of navigation marku
   another tool without intermediate files.
 - **SC-003**: A user encountering any error can identify the cause and corrective
   action from the stderr message alone, without consulting documentation.
-- **SC-004**: The article extraction workflow (list → html → extract) can be
-  composed as a single shell pipeline.
+- **SC-004**: The HTML retrieval workflow (list → html) can be composed as a
+  single shell pipeline, with output pipeable to any external tool.
 
 ## Assumptions
 
@@ -171,7 +163,5 @@ Verify the output contains the article body text and is free of navigation marku
   "Allow JavaScript from Apple Events" in the browser's developer settings.
 - For Safari HTML retrieval, static page source is used by default; JS-rendered
   content is out of scope for v1.
-- The article extraction tool is a separately installed external binary; the CLI
-  will document which tool is expected but will not bundle or install it.
-- Arc screenshot captures the frontmost tab only; targeting a background tab by
-  ID is out of scope for v1.
+- Arc screenshot activates the specified tab (via `--tab`) before capturing, or
+  uses the frontmost tab if `--tab` is omitted.
