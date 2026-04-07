@@ -6,8 +6,10 @@ enum BrowserError: Error, LocalizedError {
     case permissionDenied(BrowserName, String)
     case screenshotUnsupported(BrowserName)
     case unsupportedDefaultBrowser(String)
-    case arcReturnedNoValue
+    case pageNotScriptable
     case tabStillLoading(String)
+    case noActiveTab(BrowserName)
+    case menuItemDisabled(String)
 
     var exitCode: Int {
         switch self {
@@ -16,8 +18,10 @@ enum BrowserError: Error, LocalizedError {
         case .permissionDenied:         return 3
         case .screenshotUnsupported:    return 4
         case .unsupportedDefaultBrowser: return 5
-        case .arcReturnedNoValue:       return 6
+        case .pageNotScriptable:        return 6
         case .tabStillLoading:          return 7
+        case .noActiveTab:              return 8
+        case .menuItemDisabled:         return 9
         }
     }
 
@@ -33,10 +37,14 @@ enum BrowserError: Error, LocalizedError {
             return "Error: screenshot is only supported for Arc."
         case .unsupportedDefaultBrowser(let name):
             return "Error: Your default browser (\"\(name)\") is not supported. Use --browser chrome, safari, or arc."
-        case .arcReturnedNoValue:
-            return "Error: Arc returned no value for JavaScript execution. This is a known Arc limitation. Try again or use --browser safari."
+        case .pageNotScriptable:
+            return "Error: The page returned no content. It may be an internal page, a PDF, or still loading."
         case .tabStillLoading(let id):
             return "Error: Tab \(id) is still loading. Wait for it to finish and retry."
+        case .noActiveTab(let browser):
+            return "Error: \(browser.rawValue.capitalized) has no active tab."
+        case .menuItemDisabled(let item):
+            return "Error: Menu item \"\(item)\" is not available. The current tab may not support it."
         }
     }
 }

@@ -46,8 +46,8 @@ swift test
 
 ## Key Implementation Details
 
-- Arc active tab: compare `tab.id` (UUID) with `window.activeTab.id`
-- Safari active tab: compare tab with `window.currentTab` via `isEqual:`
+- Arc active tab: compare `tab.value(forKey: "id")` (UUID string) with `window.value(forKeyPath: "activeTab.id")` — `value(forKey: "activeTab")` returns an opaque SB proxy; `forKeyPath` resolves through the scripting engine
+- Safari active tab: compare `currentTab.value(forKey: "index")` with tab index
 - Chrome active tab: `tab.value(forKey: "active")` boolean
 - HTML retrieval: in-process JXA via OSAKit (no `osascript` subprocess)
 - Screenshot: AXUIElement `File → Capture Full Page` menu click

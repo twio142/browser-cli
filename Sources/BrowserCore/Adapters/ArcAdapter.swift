@@ -19,40 +19,49 @@ struct ArcAdapter: BrowserAdapter {
             let url = sb.performSelector(on: entry.raw, name: "URL", default: "")
 
             if activeIdPerWindow[entry.windowIndex] == nil {
-                let activeTab = entry.windowRaw.value(forKey: "activeTab") as AnyObject
-                activeIdPerWindow[entry.windowIndex] = activeTab.value(forKey: "id") as? String ?? ""
+                // value(forKey:) on the activeTab SB proxy returns nil for all properties;
+                // forKeyPath resolves the chain through the scripting engine and returns the UUID string.
+                activeIdPerWindow[entry.windowIndex] =
+                    entry.windowRaw.value(forKeyPath: "activeTab.id") as? String ?? ""
             }
 
-            let tabId = sb.performSelector(on: entry.raw, name: "id", default: "")
+            let tabId = entry.raw.value(forKey: "id") as? String ?? ""
             let active = !tabId.isEmpty && tabId == activeIdPerWindow[entry.windowIndex]
 
             return Tab(id: "\(entry.windowIndex):\(entry.tabIndex)", title: title, url: url, active: active)
         }
     }
 
-    func getHTML(tabId: String) throws -> String {
+    func getHTML(tabId: String?) throws -> String {
         guard let app = sb.connect(bundleId: BrowserName.arc.bundleId) else {
             throw BrowserError.browserNotRunning(.arc)
         }
 
-        let (windowIndex, tabIndex) = try parseTabId(tabId)
-        let allTabs = sb.listTabs(app: app)
+        let tabRef: String
 
-        guard allTabs.contains(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
-            throw BrowserError.tabNotFound(tabId)
+        if let tabId = tabId {
+            let (windowIndex, tabIndex) = try parseTabId(tabId)
+            let allTabs = sb.listTabs(app: app)
+            guard allTabs.contains(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
+                throw BrowserError.tabNotFound(tabId)
+            }
+            tabRef = "windows[\(windowIndex - 1)].tabs[\(tabIndex - 1)]"
+        } else {
+            guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
+                  windowsArray.count > 0,
+                  let tabs = (windowsArray[0] as AnyObject).value(forKey: "tabs") as? NSArray,
+                  tabs.count > 0 else {
+                throw BrowserError.noActiveTab(.arc)
+            }
+            tabRef = "windows[0].activeTab"
         }
 
-        let wi = windowIndex - 1
-        let ti = tabIndex - 1
-
         let htmlScript = """
-        Application('Arc').windows[\(wi)].tabs[\(ti)].execute({javascript: 'document.documentElement.outerHTML'})
+        Application('Arc').\(tabRef).execute({javascript: 'document.documentElement.outerHTML'})
         """
 
         do {
             return try jxa.execute(script: htmlScript)
-        } catch BrowserError.arcReturnedNoValue {
-            throw BrowserError.arcReturnedNoValue
         } catch let error as NSError {
             if isPermissionError(error) {
                 throw BrowserError.permissionDenied(.arc, "Allow JavaScript from Apple Events")

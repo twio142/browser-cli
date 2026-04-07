@@ -15,6 +15,7 @@ struct AccessibilityClient {
 
     /// Clicks the menu item at `menuTitle > itemTitle` in the given app element's menu bar.
     /// Throws `BrowserError.permissionDenied` if Accessibility access is not granted.
+    /// Throws `BrowserError.menuItemDisabled` if the item is not found or is disabled.
     func clickMenuItem(app appElement: AXUIElement, menuTitle: String, itemTitle: String) throws {
         guard AXIsProcessTrusted() else {
             throw BrowserError.permissionDenied(.arc, "Accessibility")
@@ -41,7 +42,14 @@ struct AccessibilityClient {
 
         guard let target = items.first(where: {
             attribute($0, kAXTitleAttribute) as? String == itemTitle
-        }) else { return }
+        }) else {
+            throw BrowserError.menuItemDisabled(itemTitle)
+        }
+
+        let enabled = attribute(target, kAXEnabledAttribute) as? Bool ?? false
+        guard enabled else {
+            throw BrowserError.menuItemDisabled(itemTitle)
+        }
 
         AXUIElementPerformAction(target, kAXPressAction as CFString)
     }

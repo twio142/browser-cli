@@ -24,23 +24,35 @@ struct ChromeAdapter: BrowserAdapter {
         }
     }
 
-    func getHTML(tabId: String) throws -> String {
+    func getHTML(tabId: String?) throws -> String {
         guard let app = sb.connect(bundleId: BrowserName.chrome.bundleId) else {
             throw BrowserError.browserNotRunning(.chrome)
         }
 
-        let (windowIndex, tabIndex) = try parseTabId(tabId)
-        let allTabs = sb.listTabs(app: app)
+        let tabRef: String
+        let displayId: String
 
-        guard allTabs.contains(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
-            throw BrowserError.tabNotFound(tabId)
+        if let tabId = tabId {
+            let (windowIndex, tabIndex) = try parseTabId(tabId)
+            let allTabs = sb.listTabs(app: app)
+            guard allTabs.contains(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
+                throw BrowserError.tabNotFound(tabId)
+            }
+            tabRef = "windows[\(windowIndex - 1)].tabs[\(tabIndex - 1)]"
+            displayId = tabId
+        } else {
+            guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
+                  windowsArray.count > 0,
+                  let tabs = (windowsArray[0] as AnyObject).value(forKey: "tabs") as? NSArray,
+                  tabs.count > 0 else {
+                throw BrowserError.noActiveTab(.chrome)
+            }
+            tabRef = "windows[0].activeTab"
+            displayId = "active"
         }
 
-        let wi = windowIndex - 1
-        let ti = tabIndex - 1
-
         let readyScript = """
-        Application('Google Chrome').windows[\(wi)].tabs[\(ti)].execute({javascript: 'document.readyState'})
+        Application('Google Chrome').\(tabRef).execute({javascript: 'document.readyState'})
         """
 
         let readyState: String
@@ -55,11 +67,11 @@ struct ChromeAdapter: BrowserAdapter {
         }
 
         guard readyState == "complete" else {
-            throw BrowserError.tabStillLoading(tabId)
+            throw BrowserError.tabStillLoading(displayId)
         }
 
         let htmlScript = """
-        Application('Google Chrome').windows[\(wi)].tabs[\(ti)].execute({javascript: 'document.documentElement.outerHTML'})
+        Application('Google Chrome').\(tabRef).execute({javascript: 'document.documentElement.outerHTML'})
         """
 
         do {

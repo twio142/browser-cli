@@ -4,14 +4,14 @@ import Foundation
 struct HTMLCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "html",
-        abstract: "Get raw HTML source of a tab."
+        abstract: "Get raw HTML source of a tab. Defaults to the active tab."
     )
 
     @Option(name: .long, help: "Browser to use: chrome, safari, or arc. Defaults to system default browser.")
     var browser: String?
 
-    @Option(name: .long, help: "Tab ID in \"<windowIndex>:<tabIndex>\" format (from 'browser-cli list').")
-    var tab: String
+    @Option(name: .long, help: "Tab ID in \"<windowIndex>:<tabIndex>\" format (from 'browser-cli list'). Defaults to the active tab.")
+    var tab: String?
 
     func run() throws {
         let browserName = try parseBrowserName(browser)

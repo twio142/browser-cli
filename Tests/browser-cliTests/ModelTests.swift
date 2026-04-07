@@ -68,8 +68,10 @@ struct BrowserErrorTests {
         #expect(BrowserError.permissionDenied(.chrome, "x").exitCode == 3)
         #expect(BrowserError.screenshotUnsupported(.chrome).exitCode == 4)
         #expect(BrowserError.unsupportedDefaultBrowser("firefox").exitCode == 5)
-        #expect(BrowserError.arcReturnedNoValue.exitCode == 6)
+        #expect(BrowserError.pageNotScriptable.exitCode == 6)
         #expect(BrowserError.tabStillLoading("1:1").exitCode == 7)
+        #expect(BrowserError.noActiveTab(.chrome).exitCode == 8)
+        #expect(BrowserError.menuItemDisabled("Capture Full Page").exitCode == 9)
     }
 
     @Test func errorDescriptions() {
@@ -87,5 +89,13 @@ struct BrowserErrorTests {
         let stillLoading = BrowserError.tabStillLoading("1:3")
         #expect(stillLoading.errorDescription?.contains("1:3") == true)
         #expect(stillLoading.errorDescription?.contains("loading") == true)
+
+        let noActiveTab = BrowserError.noActiveTab(.safari)
+        #expect(noActiveTab.errorDescription?.contains("Safari") == true)
+        #expect(noActiveTab.errorDescription?.contains("active tab") == true)
+
+        let menuItemDisabled = BrowserError.menuItemDisabled("Capture Full Page")
+        #expect(menuItemDisabled.errorDescription?.contains("Capture Full Page") == true)
+        #expect(menuItemDisabled.errorDescription?.contains("not available") == true)
     }
 }

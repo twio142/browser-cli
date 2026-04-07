@@ -2,7 +2,7 @@ import AppKit
 
 protocol BrowserAdapter {
     func listTabs() throws -> [Tab]
-    func getHTML(tabId: String) throws -> String
+    func getHTML(tabId: String?) throws -> String
     func screenshot(tabId: String?) throws
 }
 

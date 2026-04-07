@@ -22,21 +22,35 @@ struct SafariAdapter: BrowserAdapter {
         }
     }
 
-    func getHTML(tabId: String) throws -> String {
+    func getHTML(tabId: String?) throws -> String {
         guard let app = sb.connect(bundleId: BrowserName.safari.bundleId) else {
             throw BrowserError.browserNotRunning(.safari)
         }
 
-        let (windowIndex, tabIndex) = try parseTabId(tabId)
-        let allTabs = sb.listTabs(app: app)
+        let tabRaw: AnyObject
 
-        guard let entry = allTabs.first(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
-            throw BrowserError.tabNotFound(tabId)
+        if let tabId = tabId {
+            let (windowIndex, tabIndex) = try parseTabId(tabId)
+            let allTabs = sb.listTabs(app: app)
+            guard let entry = allTabs.first(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
+                throw BrowserError.tabNotFound(tabId)
+            }
+            tabRaw = entry.raw
+        } else {
+            guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
+                  windowsArray.count > 0 else {
+                throw BrowserError.noActiveTab(.safari)
+            }
+            tabRaw = (windowsArray[0] as AnyObject).value(forKey: "currentTab") as AnyObject
         }
 
-        let source = sb.performSelector(on: entry.raw, name: "source", default: "")
+        let source = sb.performSelector(on: tabRaw, name: "source", default: "")
         guard !source.isEmpty else {
-            throw BrowserError.tabNotFound(tabId)
+            if let tabId = tabId {
+                throw BrowserError.tabNotFound(tabId)
+            } else {
+                throw BrowserError.noActiveTab(.safari)
+            }
         }
 
         return source

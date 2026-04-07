@@ -16,10 +16,10 @@ browser-cli list [--browser <chrome|safari|arc>]
 
 ### Get HTML
 
-Retrieves the raw HTML source of a specific tab.
+Retrieves the raw HTML source of the active or a specific tab.
 
 ```bash
-browser-cli html --tab "<windowIndex>:<tabIndex>" [--browser <browser>]
+browser-cli html [--tab "<windowIndex>:<tabIndex>"] [--browser <browser>]
 ```
 
 ### Capture Screenshot (Arc Only)
