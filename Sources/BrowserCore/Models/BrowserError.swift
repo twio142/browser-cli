@@ -13,38 +13,43 @@ enum BrowserError: Error, LocalizedError {
 
     var exitCode: Int {
         switch self {
-        case .browserNotRunning:        return 1
-        case .tabNotFound:              return 2
-        case .permissionDenied:         return 3
-        case .screenshotUnsupported:    return 4
+        case .browserNotRunning: return 1
+        case .tabNotFound: return 2
+        case .permissionDenied: return 3
+        case .screenshotUnsupported: return 4
         case .unsupportedDefaultBrowser: return 5
-        case .pageNotScriptable:        return 6
-        case .tabStillLoading:          return 7
-        case .noActiveTab:              return 8
-        case .menuItemDisabled:         return 9
+        case .pageNotScriptable: return 6
+        case .tabStillLoading: return 7
+        case .noActiveTab: return 8
+        case .menuItemDisabled: return 9
         }
     }
 
     var errorDescription: String? {
         switch self {
-        case .browserNotRunning(let browser):
-            return "Error: \(browser.rawValue.capitalized) is not running. Open \(browser.rawValue.capitalized) and try again."
-        case .tabNotFound(let id):
+        case let .browserNotRunning(browser):
+            let name = browser.rawValue.capitalized
+            return "Error: \(name) is not running. Open \(name) and try again."
+        case let .tabNotFound(id):
             return "Error: No tab with ID \"\(id)\" found."
-        case .permissionDenied(let browser, let permission):
-            return "Error: \(browser.rawValue.capitalized) requires \"\(permission)\". Grant access in System Settings → Privacy & Security."
+        case let .permissionDenied(browser, permission):
+            return "Error: \(browser.rawValue.capitalized) requires \"\(permission)\"."
+                + " Grant access in System Settings → Privacy & Security."
         case .screenshotUnsupported:
             return "Error: screenshot is only supported for Arc."
-        case .unsupportedDefaultBrowser(let name):
-            return "Error: Your default browser (\"\(name)\") is not supported. Use --browser chrome, safari, or arc."
+        case let .unsupportedDefaultBrowser(name):
+            return "Error: Your default browser (\"\(name)\") is not supported."
+                + " Use --browser chrome, safari, or arc."
         case .pageNotScriptable:
-            return "Error: The page returned no content. It may be an internal page, a PDF, or still loading."
-        case .tabStillLoading(let id):
+            return "Error: The page returned no content."
+                + " It may be an internal page, a PDF, or still loading."
+        case let .tabStillLoading(id):
             return "Error: Tab \(id) is still loading. Wait for it to finish and retry."
-        case .noActiveTab(let browser):
+        case let .noActiveTab(browser):
             return "Error: \(browser.rawValue.capitalized) has no active tab."
-        case .menuItemDisabled(let item):
-            return "Error: Menu item \"\(item)\" is not available. The current tab may not support it."
+        case let .menuItemDisabled(item):
+            return "Error: Menu item \"\(item)\" is not available."
+                + " The current tab may not support it."
         }
     }
 }

@@ -1,12 +1,12 @@
-import Testing
 import AppKit
 @testable import BrowserCore
+import Testing
 
 private func arcIsRunning() -> Bool {
     !NSRunningApplication.runningApplications(withBundleIdentifier: BrowserName.arc.bundleId).isEmpty
 }
 
-@Suite("ArcAdapter (requires Arc)", .enabled(if: arcIsRunning()))
+@Suite(.enabled(if: arcIsRunning()))
 struct ArcAdapterTests {
     @Test func listTabsReturnsNonEmpty() throws {
         let tabs = try ArcAdapter().listTabs()
@@ -39,7 +39,6 @@ struct ArcAdapterTests {
     }
 }
 
-@Suite("resolveAdapter")
 struct ResolveAdapterTests {
     @Test func knownBrowserNamesResolve() throws {
         let chrome = try resolveAdapter(name: .chrome)

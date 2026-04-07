@@ -1,16 +1,16 @@
-import Foundation
 import ApplicationServices
+import Foundation
 
 struct AccessibilityClient {
-
     /// Returns the menu bar AXUIElement for the application with the given PID.
     func menuBarElement(for pid: pid_t) -> AXUIElement? {
         let appElement = AXUIElementCreateApplication(pid)
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &value) == .success else {
+        guard AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &value) == .success,
+              let ref = value else {
             return nil
         }
-        return (value as! AXUIElement)
+        return unsafeDowncast(ref, to: AXUIElement.self)
     }
 
     /// Clicks the menu item at `menuTitle > itemTitle` in the given app element's menu bar.
@@ -23,9 +23,10 @@ struct AccessibilityClient {
 
         var menuBarRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
-              let menuBar = menuBarRef as! AXUIElement? else {
+              let ref = menuBarRef else {
             throw BrowserError.permissionDenied(.arc, "Accessibility")
         }
+        let menuBar = unsafeDowncast(ref, to: AXUIElement.self)
 
         guard let menuBarItems = attribute(menuBar, kAXChildrenAttribute) as? [AXUIElement] else {
             return

@@ -2,7 +2,6 @@ import Foundation
 import OSAKit
 
 struct JXAClient {
-
     /// Executes a JXA script in-process via OSAKit and returns the string result.
     /// Throws `BrowserError.pageNotScriptable` if the script returns no value (e.g. internal or PDF page).
     /// Propagates NSError from OSAKit for other failures (e.g. permission denied).

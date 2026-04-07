@@ -2,30 +2,34 @@ import Foundation
 import ScriptingBridge
 
 struct ChromeAdapter: BrowserAdapter {
-    private let sb = ScriptingBridgeClient()
+    private let bridge = ScriptingBridgeClient()
     private let jxa = JXAClient()
 
+    private let allowJSMessage =
+        "Allow JavaScript from Apple Events"
+            + " (Chrome → View → Developer → Allow JavaScript from Apple Events)"
+
     func listTabs() throws -> [Tab] {
-        guard let app = sb.connect(bundleId: BrowserName.chrome.bundleId) else {
+        guard let app = bridge.connect(bundleId: BrowserName.chrome.bundleId) else {
             throw BrowserError.browserNotRunning(.chrome)
         }
 
         var activeTabIdPerWindow: [Int: String] = [:]
-        return sb.listTabs(app: app).map { entry in
-            let title = sb.performSelector(on: entry.raw, name: "title", default: "")
-            let url = sb.performSelector(on: entry.raw, name: "URL", default: "")
+        return bridge.listTabs(app: app).map { entry in
+            let title = bridge.performSelector(on: entry.raw, name: "title", default: "")
+            let url = bridge.performSelector(on: entry.raw, name: "URL", default: "")
             if activeTabIdPerWindow[entry.windowIndex] == nil {
                 let activeTab = entry.windowRaw.value(forKey: "activeTab") as AnyObject
                 activeTabIdPerWindow[entry.windowIndex] = activeTab.value(forKey: "id") as? String ?? ""
             }
-            let tabId = sb.performSelector(on: entry.raw, name: "id", default: "")
+            let tabId = bridge.performSelector(on: entry.raw, name: "id", default: "")
             let active = !tabId.isEmpty && tabId == activeTabIdPerWindow[entry.windowIndex]
             return Tab(id: "\(entry.windowIndex):\(entry.tabIndex)", title: title, url: url, active: active)
         }
     }
 
     func getHTML(tabId: String?) throws -> String {
-        guard let app = sb.connect(bundleId: BrowserName.chrome.bundleId) else {
+        guard let app = bridge.connect(bundleId: BrowserName.chrome.bundleId) else {
             throw BrowserError.browserNotRunning(.chrome)
         }
 
@@ -34,7 +38,7 @@ struct ChromeAdapter: BrowserAdapter {
 
         if let tabId = tabId {
             let (windowIndex, tabIndex) = try parseTabId(tabId)
-            let allTabs = sb.listTabs(app: app)
+            let allTabs = bridge.listTabs(app: app)
             guard allTabs.contains(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
                 throw BrowserError.tabNotFound(tabId)
             }
@@ -51,17 +55,13 @@ struct ChromeAdapter: BrowserAdapter {
             displayId = "active"
         }
 
-        let readyScript = """
-        Application('Google Chrome').\(tabRef).execute({javascript: 'document.readyState'})
-        """
-
         let readyState: String
         do {
-            readyState = try jxa.execute(script: readyScript)
+            let script = "Application('Google Chrome').\(tabRef).execute({javascript: 'document.readyState'})"
+            readyState = try jxa.execute(script: script)
         } catch let error as NSError {
             if isPermissionError(error) {
-                throw BrowserError.permissionDenied(.chrome,
-                    "Allow JavaScript from Apple Events (Chrome → View → Developer → Allow JavaScript from Apple Events)")
+                throw BrowserError.permissionDenied(.chrome, allowJSMessage)
             }
             throw error
         }
@@ -70,16 +70,13 @@ struct ChromeAdapter: BrowserAdapter {
             throw BrowserError.tabStillLoading(displayId)
         }
 
-        let htmlScript = """
-        Application('Google Chrome').\(tabRef).execute({javascript: 'document.documentElement.outerHTML'})
-        """
-
         do {
-            return try jxa.execute(script: htmlScript)
+            let script = "Application('Google Chrome').\(tabRef)"
+                + ".execute({javascript: 'document.documentElement.outerHTML'})"
+            return try jxa.execute(script: script)
         } catch let error as NSError {
             if isPermissionError(error) {
-                throw BrowserError.permissionDenied(.chrome,
-                    "Allow JavaScript from Apple Events (Chrome → View → Developer → Allow JavaScript from Apple Events)")
+                throw BrowserError.permissionDenied(.chrome, allowJSMessage)
             }
             throw error
         }

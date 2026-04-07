@@ -8,7 +8,7 @@ protocol BrowserAdapter {
 
 extension BrowserAdapter {
     /// Default: screenshot not supported.
-    func screenshot(tabId: String?) throws {
+    func screenshot(tabId _: String?) throws {
         throw BrowserError.screenshotUnsupported(.chrome)
     }
 }
@@ -35,6 +35,6 @@ func resolveAdapter(name: BrowserName?) throws -> any BrowserAdapter {
     switch browserName {
     case .chrome: return ChromeAdapter()
     case .safari: return SafariAdapter()
-    case .arc:    return ArcAdapter()
+    case .arc: return ArcAdapter()
     }
 }

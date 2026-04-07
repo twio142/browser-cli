@@ -1,5 +1,5 @@
-import ArgumentParser
 import AppKit
+import ArgumentParser
 import Foundation
 
 struct ScreenshotCommand: ParsableCommand {

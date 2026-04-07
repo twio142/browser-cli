@@ -1,9 +1,9 @@
 import Foundation
 
 enum BrowserName: String, CaseIterable {
-    case chrome = "chrome"
-    case safari = "safari"
-    case arc = "arc"
+    case chrome
+    case safari
+    case arc
 
     var bundleId: String {
         switch self {

@@ -7,5 +7,7 @@ struct Tab: Codable, CustomStringConvertible {
     let url: String
     let active: Bool
 
-    var description: String { "\(id)\(active ? "*" : ""): \(title) (\(url))" }
+    var description: String {
+        "\(id)\(active ? "*" : ""): \(title) (\(url))"
+    }
 }

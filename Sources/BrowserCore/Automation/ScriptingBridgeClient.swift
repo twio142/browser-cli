@@ -1,8 +1,14 @@
 import Foundation
 import ScriptingBridge
 
-class ScriptingBridgeClient {
+struct TabEntry {
+    let windowIndex: Int
+    let tabIndex: Int
+    let windowRaw: AnyObject
+    let raw: AnyObject
+}
 
+class ScriptingBridgeClient {
     func connect(bundleId: String) -> SBApplication? {
         guard let app = SBApplication(bundleIdentifier: bundleId), app.isRunning else {
             return nil
@@ -15,9 +21,9 @@ class ScriptingBridgeClient {
         return (object.value(forKey: name) as? T) ?? defaultValue
     }
 
-    /// Enumerates all tabs across all windows. Returns 1-based (windowIndex, tabIndex) pairs plus the raw window and tab objects.
-    func listTabs(app: SBApplication) -> [(windowIndex: Int, tabIndex: Int, windowRaw: AnyObject, raw: AnyObject)] {
-        var result: [(windowIndex: Int, tabIndex: Int, windowRaw: AnyObject, raw: AnyObject)] = []
+    /// Enumerates all tabs across all windows. Returns 1-based window and tab indices.
+    func listTabs(app: SBApplication) -> [TabEntry] {
+        var result: [TabEntry] = []
 
         guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray else {
             return result
@@ -28,7 +34,12 @@ class ScriptingBridgeClient {
                 continue
             }
             for (tIdx, tabObj) in tabs.enumerated() {
-                result.append((windowIndex: wIdx + 1, tabIndex: tIdx + 1, windowRaw: windowObj as AnyObject, raw: tabObj as AnyObject))
+                result.append(TabEntry(
+                    windowIndex: wIdx + 1,
+                    tabIndex: tIdx + 1,
+                    windowRaw: windowObj as AnyObject,
+                    raw: tabObj as AnyObject
+                ))
             }
         }
 

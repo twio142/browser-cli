@@ -2,17 +2,17 @@ import Foundation
 import ScriptingBridge
 
 struct SafariAdapter: BrowserAdapter {
-    private let sb = ScriptingBridgeClient()
+    private let bridge = ScriptingBridgeClient()
 
     func listTabs() throws -> [Tab] {
-        guard let app = sb.connect(bundleId: BrowserName.safari.bundleId) else {
+        guard let app = bridge.connect(bundleId: BrowserName.safari.bundleId) else {
             throw BrowserError.browserNotRunning(.safari)
         }
 
         var activeTabIndexPerWindow: [Int: Int] = [:]
-        return sb.listTabs(app: app).map { entry in
-            let title = sb.performSelector(on: entry.raw, name: "name", default: "")
-            let url = sb.performSelector(on: entry.raw, name: "URL", default: "")
+        return bridge.listTabs(app: app).map { entry in
+            let title = bridge.performSelector(on: entry.raw, name: "name", default: "")
+            let url = bridge.performSelector(on: entry.raw, name: "URL", default: "")
             if activeTabIndexPerWindow[entry.windowIndex] == nil {
                 let currentTab = entry.windowRaw.value(forKey: "currentTab") as AnyObject
                 activeTabIndexPerWindow[entry.windowIndex] = currentTab.value(forKey: "index") as? Int ?? -1
@@ -23,7 +23,7 @@ struct SafariAdapter: BrowserAdapter {
     }
 
     func getHTML(tabId: String?) throws -> String {
-        guard let app = sb.connect(bundleId: BrowserName.safari.bundleId) else {
+        guard let app = bridge.connect(bundleId: BrowserName.safari.bundleId) else {
             throw BrowserError.browserNotRunning(.safari)
         }
 
@@ -31,7 +31,7 @@ struct SafariAdapter: BrowserAdapter {
 
         if let tabId = tabId {
             let (windowIndex, tabIndex) = try parseTabId(tabId)
-            let allTabs = sb.listTabs(app: app)
+            let allTabs = bridge.listTabs(app: app)
             guard let entry = allTabs.first(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
                 throw BrowserError.tabNotFound(tabId)
             }
@@ -44,7 +44,7 @@ struct SafariAdapter: BrowserAdapter {
             tabRaw = (windowsArray[0] as AnyObject).value(forKey: "currentTab") as AnyObject
         }
 
-        let source = sb.performSelector(on: tabRaw, name: "source", default: "")
+        let source = bridge.performSelector(on: tabRaw, name: "source", default: "")
         guard !source.isEmpty else {
             if let tabId = tabId {
                 throw BrowserError.tabNotFound(tabId)

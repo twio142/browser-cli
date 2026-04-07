@@ -1,22 +1,22 @@
 import AppKit
-import ScriptingBridge
 import ApplicationServices
+import ScriptingBridge
 
 struct ArcAdapter: BrowserAdapter {
-    private let sb = ScriptingBridgeClient()
+    private let bridge = ScriptingBridgeClient()
     private let jxa = JXAClient()
-    private let ax = AccessibilityClient()
+    private let accessibility = AccessibilityClient()
 
     func listTabs() throws -> [Tab] {
-        guard let app = sb.connect(bundleId: BrowserName.arc.bundleId) else {
+        guard let app = bridge.connect(bundleId: BrowserName.arc.bundleId) else {
             throw BrowserError.browserNotRunning(.arc)
         }
 
         var activeIdPerWindow: [Int: String] = [:]
 
-        return sb.listTabs(app: app).map { entry in
-            let title = sb.performSelector(on: entry.raw, name: "title", default: "")
-            let url = sb.performSelector(on: entry.raw, name: "URL", default: "")
+        return bridge.listTabs(app: app).map { entry in
+            let title = bridge.performSelector(on: entry.raw, name: "title", default: "")
+            let url = bridge.performSelector(on: entry.raw, name: "URL", default: "")
 
             if activeIdPerWindow[entry.windowIndex] == nil {
                 // value(forKey:) on the activeTab SB proxy returns nil for all properties;
@@ -33,7 +33,7 @@ struct ArcAdapter: BrowserAdapter {
     }
 
     func getHTML(tabId: String?) throws -> String {
-        guard let app = sb.connect(bundleId: BrowserName.arc.bundleId) else {
+        guard let app = bridge.connect(bundleId: BrowserName.arc.bundleId) else {
             throw BrowserError.browserNotRunning(.arc)
         }
 
@@ -41,7 +41,7 @@ struct ArcAdapter: BrowserAdapter {
 
         if let tabId = tabId {
             let (windowIndex, tabIndex) = try parseTabId(tabId)
-            let allTabs = sb.listTabs(app: app)
+            let allTabs = bridge.listTabs(app: app)
             guard allTabs.contains(where: { $0.windowIndex == windowIndex && $0.tabIndex == tabIndex }) else {
                 throw BrowserError.tabNotFound(tabId)
             }
@@ -56,12 +56,10 @@ struct ArcAdapter: BrowserAdapter {
             tabRef = "windows[0].activeTab"
         }
 
-        let htmlScript = """
-        Application('Arc').\(tabRef).execute({javascript: 'document.documentElement.outerHTML'})
-        """
+        let script = "Application('Arc').\(tabRef).execute({javascript: 'document.documentElement.outerHTML'})"
 
         do {
-            return try jxa.execute(script: htmlScript)
+            return try jxa.execute(script: script)
         } catch let error as NSError {
             if isPermissionError(error) {
                 throw BrowserError.permissionDenied(.arc, "Allow JavaScript from Apple Events")
@@ -71,24 +69,25 @@ struct ArcAdapter: BrowserAdapter {
     }
 
     func screenshot(tabId: String?) throws {
-        guard let app = sb.connect(bundleId: BrowserName.arc.bundleId) else {
+        guard let app = bridge.connect(bundleId: BrowserName.arc.bundleId) else {
             throw BrowserError.browserNotRunning(.arc)
         }
 
         if let tabId = tabId {
             let (windowIndex, tabIndex) = try parseTabId(tabId)
-            sb.activateTab(app: app, windowIndex: windowIndex, tabIndex: tabIndex)
+            bridge.activateTab(app: app, windowIndex: windowIndex, tabIndex: tabIndex)
         }
 
         guard let runningApp = NSRunningApplication.runningApplications(
-            withBundleIdentifier: BrowserName.arc.bundleId).first else {
+            withBundleIdentifier: BrowserName.arc.bundleId
+        ).first else {
             throw BrowserError.browserNotRunning(.arc)
         }
 
         runningApp.activate(options: .activateIgnoringOtherApps)
 
         let arcElement = AXUIElementCreateApplication(runningApp.processIdentifier)
-        try ax.clickMenuItem(app: arcElement, menuTitle: "File", itemTitle: "Capture Full Page")
+        try accessibility.clickMenuItem(app: arcElement, menuTitle: "File", itemTitle: "Capture Full Page")
     }
 
     private func parseTabId(_ tabId: String) throws -> (Int, Int) {

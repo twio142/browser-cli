@@ -1,8 +1,7 @@
-import Testing
-import Foundation
 @testable import BrowserCore
+import Foundation
+import Testing
 
-@Suite("BrowserName")
 struct BrowserNameTests {
     @Test func rawValues() {
         #expect(BrowserName.chrome.rawValue == "chrome")
@@ -31,12 +30,11 @@ struct BrowserNameTests {
     }
 }
 
-@Suite("Tab")
 struct TabTests {
     @Test func jsonEncoding() throws {
         let tab = Tab(id: "2:3", title: "Example", url: "https://example.com", active: true)
         let data = try JSONEncoder().encode(tab)
-        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let json = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(json["id"] as? String == "2:3")
         #expect(json["title"] as? String == "Example")
         #expect(json["url"] as? String == "https://example.com")
@@ -60,7 +58,6 @@ struct TabTests {
     }
 }
 
-@Suite("BrowserError")
 struct BrowserErrorTests {
     @Test func exitCodes() {
         #expect(BrowserError.browserNotRunning(.chrome).exitCode == 1)
