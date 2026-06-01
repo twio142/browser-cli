@@ -3,6 +3,7 @@ import AppKit
 protocol BrowserAdapter {
     func listTabs() throws -> [Tab]
     func getHTML(tabId: String?) throws -> String
+    func getSelection() throws -> SelectionResult
     func screenshot(tabId: String?) throws
 }
 
@@ -25,7 +26,8 @@ func resolveAdapter(name: BrowserName?) throws -> any BrowserAdapter {
         }
         guard let bundle = Bundle(url: appURL),
               let bundleId = bundle.bundleIdentifier,
-              let detected = BrowserName(bundleId: bundleId) else {
+              let detected = BrowserName(bundleId: bundleId)
+        else {
             let appName = Bundle(url: appURL)?.infoDictionary?["CFBundleName"] as? String ?? "unknown"
             throw BrowserError.unsupportedDefaultBrowser(appName)
         }

@@ -7,7 +7,8 @@ struct AccessibilityClient {
         let appElement = AXUIElementCreateApplication(pid)
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &value) == .success,
-              let ref = value else {
+              let ref = value
+        else {
             return nil
         }
         return unsafeDowncast(ref, to: AXUIElement.self)
@@ -23,7 +24,8 @@ struct AccessibilityClient {
 
         var menuBarRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
-              let ref = menuBarRef else {
+              let ref = menuBarRef
+        else {
             throw BrowserError.permissionDenied(.arc, "Accessibility")
         }
         let menuBar = unsafeDowncast(ref, to: AXUIElement.self)

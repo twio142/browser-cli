@@ -58,6 +58,32 @@ struct TabTests {
     }
 }
 
+struct SelectionResultTests {
+    @Test func jsonEncoding() throws {
+        let result = SelectionResult(title: "Example", url: "https://example.com", selection: "hello world")
+        let data = try JSONEncoder().encode(result)
+        let json = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(json["title"] as? String == "Example")
+        #expect(json["url"] as? String == "https://example.com")
+        #expect(json["selection"] as? String == "hello world")
+    }
+
+    @Test func jsonDecoding() throws {
+        let json = #"{"title":"Page","url":"https://page.com","selection":"selected text"}"#
+        let result = try JSONDecoder().decode(SelectionResult.self, from: Data(json.utf8))
+        #expect(result.title == "Page")
+        #expect(result.url == "https://page.com")
+        #expect(result.selection == "selected text")
+    }
+
+    @Test func emptySelectionRoundTrips() throws {
+        let result = SelectionResult(title: "Page", url: "https://page.com", selection: "")
+        let data = try JSONEncoder().encode(result)
+        let decoded = try JSONDecoder().decode(SelectionResult.self, from: data)
+        #expect(decoded.selection == "")
+    }
+}
+
 struct BrowserErrorTests {
     @Test func exitCodes() {
         #expect(BrowserError.browserNotRunning(.chrome).exitCode == 1)

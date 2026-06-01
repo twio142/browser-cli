@@ -1,13 +1,13 @@
 # browser-cli Development Guidelines
 
-Last updated: 2026-04-07
+Last updated: 2026-06-01
 
 ## Active Technologies
 
 - Swift 6.0 (swift-tools-version:6.0, macOS 12+)
-- ScriptingBridge (system) — KVC-based, no generated headers
+- ScriptingBridge (system) — KVC-based browser automation
 - OSAKit (system) — in-process JXA execution
-- ApplicationServices/AXUIElement (system) — Arc screenshot
+- ApplicationServices/AXUIElement (system) — accessibility-based automation
 - swift-argument-parser 1.3+
 - swift-testing 6.0
 
@@ -15,10 +15,10 @@ Last updated: 2026-04-07
 
 ```text
 Sources/BrowserCore/        # Library: all logic, importable by tests
-  Adapters/                 # BrowserAdapter protocol + Chrome/Safari/Arc adapters
-  Automation/               # ScriptingBridgeClient, JXAClient, AccessibilityClient
-  Commands/                 # ListCommand, HTMLCommand, ScreenshotCommand
-  Models/                   # Tab, BrowserName, BrowserError
+  Adapters/                 # BrowserAdapter protocol + per-browser implementations
+  Automation/               # Low-level clients (ScriptingBridge, JXA, Accessibility)
+  Commands/                 # One file per CLI subcommand
+  Models/                   # Value types and error definitions
   BrowserCLI.swift          # Root ParsableCommand (public)
   Utilities.swift
 
@@ -27,8 +27,8 @@ Sources/browser-cli/        # Thin executable: main.swift only
   Info.plist                # Embedded via -sectcreate (AppleEvents + AX usage descriptions)
 
 Tests/browser-cliTests/     # @testable import BrowserCore
-  ModelTests.swift
-  IntegrationTests.swift
+  ModelTests.swift          # Pure unit tests, no browser required
+  IntegrationTests.swift    # Live adapter tests, skipped when browser not running
 ```
 
 ## Commands
@@ -44,13 +44,8 @@ swift test
 - Use `swift-testing` for all tests, no XCTest
 - Release-only builds
 
-## Key Implementation Details
+## Architecture
 
-- Arc active tab: compare `tab.value(forKey: "id")` (UUID string) with `window.value(forKeyPath: "activeTab.id")` — `value(forKey: "activeTab")` returns an opaque SB proxy; `forKeyPath` resolves through the scripting engine
-- Safari active tab: compare `currentTab.value(forKey: "index")` with tab index
-- Chrome active tab: `tab.value(forKey: "active")` boolean
-- HTML retrieval: in-process JXA via OSAKit (no `osascript` subprocess)
-- Screenshot: AXUIElement `File → Capture Full Page` menu click
+Each browser is implemented as an adapter conforming to `BrowserAdapter`. Adding a new subcommand means: add the method to the protocol, implement it in each adapter, create a `*Command.swift`, and register it in `BrowserCLI.swift`.
 
-<!-- MANUAL ADDITIONS START -->
-<!-- MANUAL ADDITIONS END -->
+The automation layer is split by mechanism: ScriptingBridge for metadata (tabs, titles, URLs), JXA via OSAKit for JavaScript execution, and AXUIElement for UI interactions. Prefer reading the source over relying on notes here — implementation details live in the code and its comments.

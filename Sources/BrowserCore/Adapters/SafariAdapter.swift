@@ -3,6 +3,7 @@ import ScriptingBridge
 
 struct SafariAdapter: BrowserAdapter {
     private let bridge = ScriptingBridgeClient()
+    private let jxa = JXAClient()
 
     func listTabs() throws -> [Tab] {
         guard let app = bridge.connect(bundleId: BrowserName.safari.bundleId) else {
@@ -38,7 +39,8 @@ struct SafariAdapter: BrowserAdapter {
             tabRaw = entry.raw
         } else {
             guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
-                  windowsArray.count > 0 else {
+                  windowsArray.count > 0
+            else {
                 throw BrowserError.noActiveTab(.safari)
             }
             tabRaw = (windowsArray[0] as AnyObject).value(forKey: "currentTab") as AnyObject
@@ -54,6 +56,34 @@ struct SafariAdapter: BrowserAdapter {
         }
 
         return source
+    }
+
+    func getSelection() throws -> SelectionResult {
+        guard let app = bridge.connect(bundleId: BrowserName.safari.bundleId) else {
+            throw BrowserError.browserNotRunning(.safari)
+        }
+
+        guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
+              windowsArray.count > 0
+        else {
+            throw BrowserError.noActiveTab(.safari)
+        }
+
+        let windowObj = windowsArray[0] as AnyObject
+        let currentTab = windowObj.value(forKey: "currentTab") as AnyObject
+        let title = bridge.performSelector(on: currentTab, name: "name", default: "")
+        let url = bridge.performSelector(on: currentTab, name: "URL", default: "")
+
+        let selection: String
+        do {
+            let script = "Application('Safari').windows[0].currentTab"
+                + ".doJavaScript('window.getSelection().toString()')"
+            selection = try jxa.execute(script: script, allowEmpty: true)
+        } catch {
+            selection = ""
+        }
+
+        return SelectionResult(title: title, url: url, selection: selection)
     }
 
     private func parseTabId(_ tabId: String) throws -> (Int, Int) {

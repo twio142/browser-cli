@@ -5,7 +5,8 @@ struct JXAClient {
     /// Executes a JXA script in-process via OSAKit and returns the string result.
     /// Throws `BrowserError.pageNotScriptable` if the script returns no value (e.g. internal or PDF page).
     /// Propagates NSError from OSAKit for other failures (e.g. permission denied).
-    func execute(script source: String) throws -> String {
+    /// Pass `allowEmpty: true` to return `""` instead of throwing when the result is an empty string.
+    func execute(script source: String, allowEmpty: Bool = false) throws -> String {
         guard let language = OSALanguage(forName: "JavaScript") else {
             throw BrowserError.pageNotScriptable
         }
@@ -21,15 +22,16 @@ struct JXAClient {
                           userInfo: [NSLocalizedDescriptionKey: message])
         }
 
-        if let value = descriptor?.stringValue, !value.isEmpty {
-            return value
+        if let value = descriptor?.stringValue {
+            if !value.isEmpty || allowEmpty { return value }
         }
 
         // Some pages (internal pages, PDFs, browser chrome) return a non-string descriptor.
         // Attempt coercion to unicode text before giving up.
         if let coerced = descriptor?.coerce(toDescriptorType: DescType(typeUnicodeText)),
-           let value = coerced.stringValue, !value.isEmpty {
-            return value
+           let value = coerced.stringValue
+        {
+            if !value.isEmpty || allowEmpty { return value }
         }
 
         throw BrowserError.pageNotScriptable

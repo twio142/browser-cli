@@ -50,7 +50,8 @@ struct ArcAdapter: BrowserAdapter {
             guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
                   windowsArray.count > 0,
                   let tabs = (windowsArray[0] as AnyObject).value(forKey: "tabs") as? NSArray,
-                  tabs.count > 0 else {
+                  tabs.count > 0
+            else {
                 throw BrowserError.noActiveTab(.arc)
             }
             tabRef = "windows[0].activeTab"
@@ -66,6 +67,39 @@ struct ArcAdapter: BrowserAdapter {
             }
             throw error
         }
+    }
+
+    func getSelection() throws -> SelectionResult {
+        guard let app = bridge.connect(bundleId: BrowserName.arc.bundleId) else {
+            throw BrowserError.browserNotRunning(.arc)
+        }
+
+        guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
+              windowsArray.count > 0
+        else {
+            throw BrowserError.noActiveTab(.arc)
+        }
+
+        let windowObj = windowsArray[0] as AnyObject
+        // forKeyPath resolves through the scripting engine for Arc's activeTab proxy
+        let title = windowObj.value(forKeyPath: "activeTab.title") as? String ?? ""
+        let url = windowObj.value(forKeyPath: "activeTab.URL") as? String ?? ""
+
+        let selection: String
+        do {
+            let script = "Application('Arc').windows[0].activeTab"
+                + ".execute({javascript: 'window.getSelection().toString()'})"
+            selection = try jxa.execute(script: script, allowEmpty: true)
+        } catch is BrowserError {
+            selection = ""
+        } catch let error as NSError {
+            if isPermissionError(error) {
+                throw BrowserError.permissionDenied(.arc, "Allow JavaScript from Apple Events")
+            }
+            selection = ""
+        }
+
+        return SelectionResult(title: title, url: url, selection: selection)
     }
 
     func screenshot(tabId: String?) throws {

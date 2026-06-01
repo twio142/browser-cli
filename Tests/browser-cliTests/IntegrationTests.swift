@@ -37,6 +37,15 @@ struct ArcAdapterTests {
             _ = try ArcAdapter().getHTML(tabId: "99:99")
         }
     }
+
+    @Test func getSelectionReturnsResult() throws {
+        let result = try ArcAdapter().getSelection()
+        #expect(!result.title.isEmpty || !result.url.isEmpty)
+        // selection may be empty string — just verify the field exists by decoding
+        let data = try JSONEncoder().encode(result)
+        let decoded = try JSONDecoder().decode(SelectionResult.self, from: data)
+        #expect(decoded.url == result.url)
+    }
 }
 
 struct ResolveAdapterTests {

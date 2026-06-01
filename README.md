@@ -4,7 +4,7 @@ A Swift-based CLI tool designed for AI agents to access browser tab data from Ch
 
 ## Usage
 
-Access tab lists, raw HTML, and full-page screenshots directly from the terminal.
+Access tab lists, raw HTML, selected text, and full-page screenshots directly from the terminal.
 
 ### List Tabs
 
@@ -20,6 +20,24 @@ Retrieves the raw HTML source of the active or a specific tab.
 
 ```bash
 browser-cli html [--tab "<windowIndex>:<tabIndex>"] [--browser <browser>]
+```
+
+### Get Selection
+
+Retrieves the selected text in the active tab, along with its title and URL, as JSON. `selection` is an empty string when nothing is selected.
+
+```bash
+browser-cli selection [--browser <chrome|safari|arc>]
+```
+
+Example output:
+
+```json
+{
+  "title" : "Example Domain",
+  "url" : "https://example.com",
+  "selection" : "This domain is for use in illustrative examples."
+}
 ```
 
 ### Capture Screenshot (Arc Only)

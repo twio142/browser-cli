@@ -7,7 +7,7 @@ struct ChromeAdapter: BrowserAdapter {
 
     private let allowJSMessage =
         "Allow JavaScript from Apple Events"
-            + " (Chrome → View → Developer → Allow JavaScript from Apple Events)"
+        + " (Chrome → View → Developer → Allow JavaScript from Apple Events)"
 
     func listTabs() throws -> [Tab] {
         guard let app = bridge.connect(bundleId: BrowserName.chrome.bundleId) else {
@@ -48,7 +48,8 @@ struct ChromeAdapter: BrowserAdapter {
             guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
                   windowsArray.count > 0,
                   let tabs = (windowsArray[0] as AnyObject).value(forKey: "tabs") as? NSArray,
-                  tabs.count > 0 else {
+                  tabs.count > 0
+            else {
                 throw BrowserError.noActiveTab(.chrome)
             }
             tabRef = "windows[0].activeTab"
@@ -80,6 +81,39 @@ struct ChromeAdapter: BrowserAdapter {
             }
             throw error
         }
+    }
+
+    func getSelection() throws -> SelectionResult {
+        guard let app = bridge.connect(bundleId: BrowserName.chrome.bundleId) else {
+            throw BrowserError.browserNotRunning(.chrome)
+        }
+
+        guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
+              windowsArray.count > 0
+        else {
+            throw BrowserError.noActiveTab(.chrome)
+        }
+
+        let windowObj = windowsArray[0] as AnyObject
+        let activeTab = windowObj.value(forKey: "activeTab") as AnyObject
+        let title = bridge.performSelector(on: activeTab, name: "title", default: "")
+        let url = bridge.performSelector(on: activeTab, name: "URL", default: "")
+
+        let selection: String
+        do {
+            let script = "Application('Google Chrome').windows[0].activeTab"
+                + ".execute({javascript: 'window.getSelection().toString()'})"
+            selection = try jxa.execute(script: script, allowEmpty: true)
+        } catch is BrowserError {
+            selection = ""
+        } catch let error as NSError {
+            if isPermissionError(error) {
+                throw BrowserError.permissionDenied(.chrome, allowJSMessage)
+            }
+            selection = ""
+        }
+
+        return SelectionResult(title: title, url: url, selection: selection)
     }
 
     private func parseTabId(_ tabId: String) throws -> (Int, Int) {
