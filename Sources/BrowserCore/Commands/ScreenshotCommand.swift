@@ -33,6 +33,9 @@ struct ScreenshotCommand: ParsableCommand {
             throw ExitCode(Int32(error.exitCode))
         }
 
+        // Read before triggering the capture so a stale clipboard image can't be mistaken for the new one.
+        let changeCountBeforeCapture = NSPasteboard.general.changeCount
+
         do {
             try adapter.screenshot(tabId: tab)
         } catch let error as BrowserError {
@@ -41,15 +44,14 @@ struct ScreenshotCommand: ParsableCommand {
         }
 
         if let outputPath = output {
-            Thread.sleep(forTimeInterval: 0.5)
-
-            guard let tiffData = NSPasteboard.general.data(forType: .tiff) else {
+            guard let tiffData = waitForClipboardImage(since: changeCountBeforeCapture) else {
                 writeStderr("Error: No image found in clipboard after screenshot.")
                 throw ExitCode(1)
             }
 
             guard let imageRep = NSBitmapImageRep(data: tiffData),
-                  let pngData = imageRep.representation(using: .png, properties: [:]) else {
+                  let pngData = imageRep.representation(using: .png, properties: [:])
+            else {
                 writeStderr("Error: Failed to convert clipboard image to PNG.")
                 throw ExitCode(1)
             }
@@ -66,6 +68,22 @@ struct ScreenshotCommand: ParsableCommand {
         } else {
             print("Screenshot copied to clipboard.")
         }
+    }
+
+    /// Waits for Arc to place a fresh image on the clipboard. Full-page capture of a long page
+    /// takes several seconds, and Arc bumps the change count before the image is ready.
+    private func waitForClipboardImage(since changeCount: Int, timeout: TimeInterval = 15) -> Data? {
+        let pasteboard = NSPasteboard.general
+        let deadline = Date().addingTimeInterval(timeout)
+
+        while Date() < deadline {
+            if pasteboard.changeCount != changeCount, let data = pasteboard.data(forType: .tiff) {
+                return data
+            }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+
+        return nil
     }
 
     private func parseBrowserName(_ name: String?) throws -> BrowserName? {

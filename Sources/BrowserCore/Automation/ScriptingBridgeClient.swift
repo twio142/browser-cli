@@ -45,13 +45,4 @@ class ScriptingBridgeClient {
 
         return result
     }
-
-    /// Activates the specified tab (1-based indices) and brings its window to the foreground.
-    func activateTab(app: SBApplication, windowIndex: Int, tabIndex: Int) {
-        guard let windowsArray = (app as AnyObject).value(forKey: "windows") as? NSArray,
-              windowIndex > 0, windowIndex <= windowsArray.count else { return }
-
-        let windowObj = windowsArray[windowIndex - 1] as AnyObject
-        windowObj.setValue(tabIndex, forKey: "activeTabIndex")
-    }
 }

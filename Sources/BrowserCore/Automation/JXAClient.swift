@@ -7,6 +7,34 @@ struct JXAClient {
     /// Propagates NSError from OSAKit for other failures (e.g. permission denied).
     /// Pass `allowEmpty: true` to return `""` instead of throwing when the result is an empty string.
     func execute(script source: String, allowEmpty: Bool = false) throws -> String {
+        let descriptor = try evaluate(script: source)
+
+        if let value = descriptor?.stringValue {
+            if !value.isEmpty || allowEmpty {
+                return value
+            }
+        }
+
+        // Some pages (internal pages, PDFs, browser chrome) return a non-string descriptor.
+        // Attempt coercion to unicode text before giving up.
+        if let coerced = descriptor?.coerce(toDescriptorType: DescType(typeUnicodeText)),
+           let value = coerced.stringValue
+        {
+            if !value.isEmpty || allowEmpty {
+                return value
+            }
+        }
+
+        throw BrowserError.pageNotScriptable
+    }
+
+    /// Executes a JXA script for its side effect, discarding the result.
+    /// Use for scripting commands that return nothing (e.g. Arc's `select`).
+    func run(script source: String) throws {
+        _ = try evaluate(script: source)
+    }
+
+    private func evaluate(script source: String) throws -> NSAppleEventDescriptor? {
         guard let language = OSALanguage(forName: "JavaScript") else {
             throw BrowserError.pageNotScriptable
         }
@@ -22,18 +50,6 @@ struct JXAClient {
                           userInfo: [NSLocalizedDescriptionKey: message])
         }
 
-        if let value = descriptor?.stringValue {
-            if !value.isEmpty || allowEmpty { return value }
-        }
-
-        // Some pages (internal pages, PDFs, browser chrome) return a non-string descriptor.
-        // Attempt coercion to unicode text before giving up.
-        if let coerced = descriptor?.coerce(toDescriptorType: DescType(typeUnicodeText)),
-           let value = coerced.stringValue
-        {
-            if !value.isEmpty || allowEmpty { return value }
-        }
-
-        throw BrowserError.pageNotScriptable
+        return descriptor
     }
 }

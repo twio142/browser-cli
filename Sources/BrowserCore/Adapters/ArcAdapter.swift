@@ -109,7 +109,25 @@ struct ArcAdapter: BrowserAdapter {
 
         if let tabId = tabId {
             let (windowIndex, tabIndex) = try parseTabId(tabId)
-            bridge.activateTab(app: app, windowIndex: windowIndex, tabIndex: tabIndex)
+            let allTabs = bridge.listTabs(app: app)
+            guard let entry = allTabs.first(where: {
+                $0.windowIndex == windowIndex && $0.tabIndex == tabIndex
+            }) else {
+                throw BrowserError.tabNotFound(tabId)
+            }
+            // Arc's window has no writable active-tab property; tabs are switched with the `select` command.
+            let script = "Application('Arc').windows[\(windowIndex - 1)].tabs[\(tabIndex - 1)].select()"
+            do {
+                try jxa.run(script: script)
+            } catch let error as NSError {
+                if isPermissionError(error) {
+                    throw BrowserError.permissionDenied(.arc, "Allow Apple Events")
+                }
+                throw error
+            }
+
+            // `select` returns before the switch lands, so the capture below would grab the outgoing page.
+            waitForActiveTab(window: entry.windowRaw, tabId: entry.raw.value(forKey: "id") as? String)
         }
 
         guard let runningApp = NSRunningApplication.runningApplications(
@@ -122,6 +140,27 @@ struct ArcAdapter: BrowserAdapter {
 
         let arcElement = AXUIElementCreateApplication(runningApp.processIdentifier)
         try accessibility.clickMenuItem(app: arcElement, menuTitle: "File", itemTitle: "Capture Full Page")
+    }
+
+    /// Polls the window's active tab until it matches `tabId`, then lets the new page settle.
+    /// Falls back to a fixed wait when the tab has no readable id.
+    private func waitForActiveTab(window: AnyObject, tabId: String?, timeout: TimeInterval = 2.0) {
+        let settleDelay: TimeInterval = 0.3
+
+        guard let tabId = tabId, !tabId.isEmpty else {
+            Thread.sleep(forTimeInterval: settleDelay)
+            return
+        }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if window.value(forKeyPath: "activeTab.id") as? String == tabId {
+                break
+            }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+
+        Thread.sleep(forTimeInterval: settleDelay)
     }
 
     private func parseTabId(_ tabId: String) throws -> (Int, Int) {
