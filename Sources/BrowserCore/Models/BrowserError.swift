@@ -36,10 +36,10 @@ enum BrowserError: Error, LocalizedError {
             return "Error: \(browser.rawValue.capitalized) requires \"\(permission)\"."
                 + " Grant access in System Settings → Privacy & Security."
         case .screenshotUnsupported:
-            return "Error: screenshot is only supported for Arc."
+            return "Error: screenshot is only supported for Arc and Vivaldi."
         case let .unsupportedDefaultBrowser(name):
             return "Error: Your default browser (\"\(name)\") is not supported."
-                + " Use --browser chrome, safari, or arc."
+                + " Use --browser chrome, vivaldi, safari, or arc."
         case .pageNotScriptable:
             return "Error: The page returned no content."
                 + " It may be an internal page, a PDF, or still loading."

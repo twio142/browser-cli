@@ -14,47 +14,49 @@ struct AccessibilityClient {
         return unsafeDowncast(ref, to: AXUIElement.self)
     }
 
-    /// Clicks the menu item at `menuTitle > itemTitle` in the given app element's menu bar.
+    /// Clicks the menu item at `path` in the app's menu bar,
+    /// e.g. `["Tools", "Capture", "Page to Clipboard"]`.
+    /// The first element is the menu bar title; each later one is an item inside the previous menu.
     /// Throws `BrowserError.permissionDenied` if Accessibility access is not granted.
-    /// Throws `BrowserError.menuItemDisabled` if the item is not found or is disabled.
-    func clickMenuItem(app appElement: AXUIElement, menuTitle: String, itemTitle: String) throws {
+    /// Throws `BrowserError.menuItemDisabled` if any item on the path is missing, or the final item is disabled.
+    func clickMenuItem(app appElement: AXUIElement, browser: BrowserName, path: [String]) throws {
         guard AXIsProcessTrusted() else {
-            throw BrowserError.permissionDenied(.arc, "Accessibility")
+            throw BrowserError.permissionDenied(browser, "Accessibility")
         }
 
         var menuBarRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
               let ref = menuBarRef
         else {
-            throw BrowserError.permissionDenied(.arc, "Accessibility")
-        }
-        let menuBar = unsafeDowncast(ref, to: AXUIElement.self)
-
-        guard let menuBarItems = attribute(menuBar, kAXChildrenAttribute) as? [AXUIElement] else {
-            return
+            throw BrowserError.permissionDenied(browser, "Accessibility")
         }
 
-        guard let menuItem = menuBarItems.first(where: {
-            attribute($0, kAXTitleAttribute) as? String == menuTitle
-        }) else { return }
+        let displayPath = path.joined(separator: " → ")
+        var container = unsafeDowncast(ref, to: AXUIElement.self)
 
-        guard let submenuChildren = attribute(menuItem, kAXChildrenAttribute) as? [AXUIElement],
-              let submenu = submenuChildren.first else { return }
+        for (depth, title) in path.enumerated() {
+            guard let items = attribute(container, kAXChildrenAttribute) as? [AXUIElement],
+                  let item = items.first(where: { attribute($0, kAXTitleAttribute) as? String == title })
+            else {
+                throw BrowserError.menuItemDisabled(displayPath)
+            }
 
-        guard let items = attribute(submenu, kAXChildrenAttribute) as? [AXUIElement] else { return }
+            if depth == path.count - 1 {
+                guard attribute(item, kAXEnabledAttribute) as? Bool ?? false else {
+                    throw BrowserError.menuItemDisabled(displayPath)
+                }
+                AXUIElementPerformAction(item, kAXPressAction as CFString)
+                return
+            }
 
-        guard let target = items.first(where: {
-            attribute($0, kAXTitleAttribute) as? String == itemTitle
-        }) else {
-            throw BrowserError.menuItemDisabled(itemTitle)
+            // A menu bar item or submenu item holds its menu as its single child.
+            guard let children = attribute(item, kAXChildrenAttribute) as? [AXUIElement],
+                  let menu = children.first
+            else {
+                throw BrowserError.menuItemDisabled(displayPath)
+            }
+            container = menu
         }
-
-        let enabled = attribute(target, kAXEnabledAttribute) as? Bool ?? false
-        guard enabled else {
-            throw BrowserError.menuItemDisabled(itemTitle)
-        }
-
-        AXUIElementPerformAction(target, kAXPressAction as CFString)
     }
 
     private func attribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {

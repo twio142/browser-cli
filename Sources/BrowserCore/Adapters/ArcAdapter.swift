@@ -139,7 +139,7 @@ struct ArcAdapter: BrowserAdapter {
         runningApp.activate(options: .activateIgnoringOtherApps)
 
         let arcElement = AXUIElementCreateApplication(runningApp.processIdentifier)
-        try accessibility.clickMenuItem(app: arcElement, menuTitle: "File", itemTitle: "Capture Full Page")
+        try accessibility.clickMenuItem(app: arcElement, browser: .arc, path: ["File", "Capture Full Page"])
     }
 
     /// Polls the window's active tab until it matches `tabId`, then lets the new page settle.

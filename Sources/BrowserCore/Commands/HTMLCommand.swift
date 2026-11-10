@@ -7,7 +7,7 @@ struct HTMLCommand: ParsableCommand {
         abstract: "Get raw HTML source of a tab. Defaults to the active tab."
     )
 
-    @Option(name: .long, help: "Browser to use: chrome, safari, or arc. Defaults to system default browser.")
+    @Option(name: .long, help: "Browser to use: chrome, vivaldi, safari, or arc. Defaults to system default browser.")
     var browser: String?
 
     @Option(name: .long, help: "Tab ID in \"<windowIndex>:<tabIndex>\" format (see 'list'). Defaults to active tab.")
@@ -38,7 +38,7 @@ struct HTMLCommand: ParsableCommand {
     private func parseBrowserName(_ name: String?) throws -> BrowserName? {
         guard let name = name else { return nil }
         guard let browserName = BrowserName(rawValue: name) else {
-            writeStderr("Error: Unknown browser \"\(name)\". Use chrome, safari, or arc.")
+            writeStderr("Error: Unknown browser \"\(name)\". Use chrome, vivaldi, safari, or arc.")
             throw ExitCode(1)
         }
         return browserName

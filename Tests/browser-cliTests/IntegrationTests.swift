@@ -51,9 +51,11 @@ struct ArcAdapterTests {
 struct ResolveAdapterTests {
     @Test func knownBrowserNamesResolve() throws {
         let chrome = try resolveAdapter(name: .chrome)
+        let vivaldi = try resolveAdapter(name: .vivaldi)
         let safari = try resolveAdapter(name: .safari)
         let arc = try resolveAdapter(name: .arc)
         #expect(chrome is ChromeAdapter)
+        #expect((vivaldi as? ChromeAdapter)?.browser == .vivaldi)
         #expect(safari is SafariAdapter)
         #expect(arc is ArcAdapter)
     }

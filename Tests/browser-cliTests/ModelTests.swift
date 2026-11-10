@@ -5,21 +5,29 @@ import Testing
 struct BrowserNameTests {
     @Test func rawValues() {
         #expect(BrowserName.chrome.rawValue == "chrome")
+        #expect(BrowserName.vivaldi.rawValue == "vivaldi")
         #expect(BrowserName.safari.rawValue == "safari")
         #expect(BrowserName.arc.rawValue == "arc")
     }
 
     @Test func bundleIds() {
         #expect(BrowserName.chrome.bundleId == "com.google.Chrome")
+        #expect(BrowserName.vivaldi.bundleId == "com.vivaldi.Vivaldi")
         #expect(BrowserName.safari.bundleId == "com.apple.Safari")
         #expect(BrowserName.arc.bundleId == "company.thebrowser.Browser")
     }
 
     @Test func initFromBundleId() {
         #expect(BrowserName(bundleId: "com.google.Chrome") == .chrome)
+        #expect(BrowserName(bundleId: "com.vivaldi.Vivaldi") == .vivaldi)
         #expect(BrowserName(bundleId: "com.apple.Safari") == .safari)
         #expect(BrowserName(bundleId: "company.thebrowser.Browser") == .arc)
         #expect(BrowserName(bundleId: "org.mozilla.firefox") == nil)
+    }
+
+    @Test func screenshotSupport() {
+        let supported = BrowserName.allCases.filter(\.supportsScreenshot)
+        #expect(Set(supported) == [.arc, .vivaldi])
     }
 
     @Test func roundTrip() {

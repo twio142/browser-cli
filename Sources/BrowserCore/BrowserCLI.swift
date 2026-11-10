@@ -5,7 +5,7 @@ public struct BrowserCLI: ParsableCommand {
     public init() {}
     public static let configuration = CommandConfiguration(
         commandName: "browser-cli",
-        abstract: "Access browser tab data from Chrome, Safari, and Arc.",
+        abstract: "Access browser tab data from Chrome, Vivaldi, Safari, and Arc.",
         subcommands: [ListCommand.self, HTMLCommand.self, SelectionCommand.self, ScreenshotCommand.self]
     )
 }

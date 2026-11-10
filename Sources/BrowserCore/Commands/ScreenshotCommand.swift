@@ -5,10 +5,13 @@ import Foundation
 struct ScreenshotCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "screenshot",
-        abstract: "Capture a full-page screenshot in Arc (copies to clipboard or saves to file)."
+        abstract: "Capture a page screenshot in Arc or Vivaldi (copies to clipboard or saves to file)."
     )
 
-    @Option(name: .long, help: "Browser to use. Only 'arc' is supported.")
+    @Option(
+        name: .long,
+        help: "Browser to use: arc or vivaldi. Defaults to the system default browser if supported, else arc."
+    )
     var browser: String?
 
     @Option(name: .long, help: "Tab ID in \"<windowIndex>:<tabIndex>\" format. Activates this tab before capture.")
@@ -20,14 +23,14 @@ struct ScreenshotCommand: ParsableCommand {
     func run() throws {
         let browserName = try parseBrowserName(browser)
 
-        guard browserName == nil || browserName == .arc else {
-            writeStderr(BrowserError.screenshotUnsupported(browserName!).errorDescription ?? "")
+        if let browserName = browserName, !browserName.supportsScreenshot {
+            writeStderr(BrowserError.screenshotUnsupported(browserName).errorDescription ?? "")
             throw ExitCode(4)
         }
 
         let adapter: any BrowserAdapter
         do {
-            adapter = try resolveAdapter(name: .arc)
+            adapter = try resolveAdapter(name: browserName ?? screenshotDefaultBrowser())
         } catch let error as BrowserError {
             writeStderr(error.errorDescription ?? error.localizedDescription)
             throw ExitCode(Int32(error.exitCode))
@@ -70,7 +73,7 @@ struct ScreenshotCommand: ParsableCommand {
         }
     }
 
-    /// Waits for Arc to place a fresh image on the clipboard. Full-page capture of a long page
+    /// Waits for the browser to place a fresh image on the clipboard. Full-page capture of a long page
     /// takes several seconds, and Arc bumps the change count before the image is ready.
     private func waitForClipboardImage(since changeCount: Int, timeout: TimeInterval = 15) -> Data? {
         let pasteboard = NSPasteboard.general
@@ -86,10 +89,16 @@ struct ScreenshotCommand: ParsableCommand {
         return nil
     }
 
+    /// The default browser when it can take screenshots, otherwise Arc.
+    private func screenshotDefaultBrowser() -> BrowserName {
+        guard let detected = try? defaultBrowserName(), detected.supportsScreenshot else { return .arc }
+        return detected
+    }
+
     private func parseBrowserName(_ name: String?) throws -> BrowserName? {
         guard let name = name else { return nil }
         guard let browserName = BrowserName(rawValue: name) else {
-            writeStderr("Error: Unknown browser \"\(name)\". Use chrome, safari, or arc.")
+            writeStderr("Error: Unknown browser \"\(name)\". Use chrome, vivaldi, safari, or arc.")
             throw ExitCode(1)
         }
         return browserName

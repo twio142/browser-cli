@@ -1,6 +1,6 @@
 # browser-cli
 
-A Swift-based CLI tool designed for AI agents to access browser tab data from Chrome, Safari, and Arc on macOS.
+A Swift-based CLI tool designed for AI agents to access browser tab data from Chrome, Vivaldi, Safari, and Arc on macOS.
 
 ## Usage
 
@@ -11,7 +11,7 @@ Access tab lists, raw HTML, selected text, and full-page screenshots directly fr
 Lists all open tabs from the default or specified browser as JSON.
 
 ```bash
-browser-cli list [--browser <chrome|safari|arc>]
+browser-cli list [--browser <chrome|vivaldi|safari|arc>]
 ```
 
 ### Get HTML
@@ -27,7 +27,7 @@ browser-cli html [--tab "<windowIndex>:<tabIndex>"] [--browser <browser>]
 Retrieves the selected text in the active tab, along with its title and URL, as JSON. `selection` is an empty string when nothing is selected.
 
 ```bash
-browser-cli selection [--browser <chrome|safari|arc>]
+browser-cli selection [--browser <chrome|vivaldi|safari|arc>]
 ```
 
 Example output:
@@ -40,12 +40,12 @@ Example output:
 }
 ```
 
-### Capture Screenshot (Arc Only)
+### Capture Screenshot (Arc and Vivaldi Only)
 
-Captures a full-page screenshot of an Arc tab. Saves to a file or keeps in the clipboard if `--output` is omitted.
+Captures a screenshot of an Arc or Vivaldi tab. Arc uses File → Capture Full Page; Vivaldi uses Tools → Capture → Page to Clipboard. Saves to a file or keeps in the clipboard if `--output` is omitted. Without `--browser`, uses the default browser if it supports screenshots, otherwise Arc.
 
 ```bash
-browser-cli screenshot --browser arc [--tab <tab>] [--output /path/to/image.png]
+browser-cli screenshot [--browser <arc|vivaldi>] [--tab <tab>] [--output /path/to/image.png]
 ```
 
 ## Supported Browsers
@@ -53,7 +53,7 @@ browser-cli screenshot --browser arc [--tab <tab>] [--output /path/to/image.png]
 - Google Chrome
 - Safari
 - Arc
-- Other Chromium-based browsers (when set as the system default)
+- Vivaldi
 
 ## Requirements
 
