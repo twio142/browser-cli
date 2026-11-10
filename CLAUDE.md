@@ -1,6 +1,6 @@
 # browser-cli Development Guidelines
 
-Last updated: 2026-06-01
+Last updated: 2026-11-10
 
 ## Active Technologies
 
@@ -9,7 +9,7 @@ Last updated: 2026-06-01
 - OSAKit (system) — in-process JXA execution
 - ApplicationServices/AXUIElement (system) — accessibility-based automation
 - swift-argument-parser 1.3+
-- swift-testing 6.0
+- Swift Testing (built into the toolchain, no package dependency)
 
 ## Project Structure
 
@@ -35,13 +35,15 @@ Tests/browser-cliTests/     # @testable import BrowserCore
 
 ```bash
 swift build -c release      # always build release, not debug
-swift test
+
+# With only the Command Line Tools (no Xcode), the Swift Testing macro plugin must be passed by hand:
+swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing
 ```
 
 ## Code Style
 
 - Swift 6.0 — follow standard conventions
-- Use `swift-testing` for all tests, no XCTest
+- Use Swift Testing (`import Testing`) for all tests, no XCTest
 - Release-only builds
 
 ## Architecture
